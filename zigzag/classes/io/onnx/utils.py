@@ -1,18 +1,19 @@
+import enum
 import importlib
 import logging
-from os import path
 from dataclasses import dataclass
+from enum import auto
+from os import path
 from typing import List
 
 import onnx
+from onnx import AttributeProto
 
 logger = logging.getLogger(__name__)
 
-
+## Parse the input accelerator residing in accelerator_path.
+# @param mapping_path
 def parse_mapping_from_path(mapping_path):
-    """
-    Parse the input accelerator residing in accelerator_path.
-    """
     # Sanity check on mapping_path
     if mapping_path is None:
         # Update the mapping_path to the default mapping file
@@ -39,14 +40,15 @@ def parse_onnx_model_from_path(onnx_model_path):
     return onnx.load(onnx_model_path, load_external_data=False)
 
 
+## Retrieves the attrs[name_idx].ints from attrs.
+# If attrs[name_idx] is of type INTS, attrs[name_idx].ints is returned.
+# If attrs[name_idx] is of type INT, attrs[name_idx].i is returned.
+# If name does not exist in attrs, the default provided by the caller is used.
+# If the caller doesn't supply a default, an error is thrown.
+# @param name
+# @param attrs
+# @param default
 def get_attribute_ints_with_name(name, attrs, default=None):
-    """
-    Retrieves the attrs[name_idx].ints from attrs.
-    If attrs[name_idx] is of type INTS, attrs[name_idx].ints is returned.
-    If attrs[name_idx] is of type INT, attrs[name_idx].i is returned.
-    If name does not exist in attrs, the default provided by the caller is used.
-    If the caller doesn't supply a default, an error is thrown.
-    """
     attrs_names = [attr.name for attr in attrs]
     try:
         name_idx = attrs_names.index(name)
@@ -68,42 +70,62 @@ def get_attribute_ints_with_name(name, attrs, default=None):
             )
 
 
-from onnx import AttributeProto
+## Description missing
+class OnnxTensorCategory(enum.Enum):
+    Input = auto()
+    Output = auto()
+    Hidden = auto()
+    Constant = auto()
+
+    @property
+    def is_output(self):
+        return self == OnnxTensorCategory.Output
+
+    @property
+    def is_input(self):
+        return self == OnnxTensorCategory.Input
+
+    @property
+    def is_hidden(self):
+        return self == OnnxTensorCategory.Hidden
+
+    @property
+    def is_constant(self):
+        return self == OnnxTensorCategory.Constant
 
 
 @dataclass
+## Description missing
 class OnnxTensorType:
     shape: List[int]
     elem_type: int
+    category: OnnxTensorCategory
 
     @staticmethod
-    def from_tensor_type(tensor_type):
+    def from_tensor_type(tensor_type, category: OnnxTensorCategory):
         shape = [d.dim_value for d in tensor_type.shape.dim]
         elem_type = tensor_type.elem_type
 
-        return OnnxTensorType(shape, elem_type)
+        return OnnxTensorType(shape, elem_type, category)
 
 
 def get_onnx_tensor_type(name, model):
-    model_input_names = [input.name for input in model.graph.input]
-    model_output_names = [output.name for output in model.graph.output]
-
     for input in model.graph.input:
         if input.name == name:
-            return OnnxTensorType.from_tensor_type(input.type.tensor_type)
+            return OnnxTensorType.from_tensor_type(input.type.tensor_type, OnnxTensorCategory.Input)
 
     for output in model.graph.output:
         if output.name == name:
-            return OnnxTensorType.from_tensor_type(output.type.tensor_type)
+            return OnnxTensorType.from_tensor_type(output.type.tensor_type, OnnxTensorCategory.Output)
 
     for value_info in model.graph.value_info:
         if value_info.name == name:
-            return OnnxTensorType.from_tensor_type(value_info.type.tensor_type)
+            return OnnxTensorType.from_tensor_type(value_info.type.tensor_type, OnnxTensorCategory.Hidden)
 
     for init in model.graph.initializer:
         if init.name == name:
             # initializers are represented a bit differently from other tensors
-            return OnnxTensorType(list(init.dims), init.data_type)
+            return OnnxTensorType(list(init.dims), init.data_type, OnnxTensorCategory.Constant)
 
     raise KeyError(
         f""

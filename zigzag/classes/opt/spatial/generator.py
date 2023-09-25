@@ -6,49 +6,58 @@ from zigzag.classes.hardware.architecture.dimension import Dimension
 from zigzag.classes.hardware.architecture.memory_hierarchy import MemoryHierarchy
 from zigzag.classes.hardware.architecture.operational_array import OperationalArray
 
-
+## Class that generates valid user-format spatial mappings.
 class UserSpatialMappingGenerator:
-    """Class that generates valid user-format spatial mappings."""
-
-    def __init__(self, layer, accelerator) -> None:
+    ## The class constructor
+    # @param layer
+    # @param accelerator
+    def __init__(self, layer, accelerator, defined_mapping=None) -> None:
         self.layer = layer
         self.accelerator = accelerator
+        self.defined_mapping = defined_mapping
 
     def run(self):
         return self.generate_user_spatial_mappings()
 
+    ## Generator that yields user-defined spatial mappings.
+    # User-defined means across operational array dimensions.
+    # For example, this might yield {'D1': (C, 16), 'D2': (K,16)}
+    # In essence it works as follows:
+    # \code{.py} 
+    # for each operational array dimension oa_dim (D1, D2, ...):
+    #      for each layer operand layer_op (W, I, O, ...):
+    #       if oa_dim not in served_dimensions(layer_op):
+    #           continue
+    #       else:
+    #           for layer dimensions layer_dim (B, K, ...) in the layer:
+    #               if layer_dim is irrelevant for layer_op:
+    #                   layer_dim can be unrolled maximally
+    #                 if layer_dim is not irrelevant for layer_op:
+    #                   layer_dim can be unrolled if the BW allows it (assumes flexible "bus" reads)
+    # \endcode
     def generate_user_spatial_mappings(self):
-        """
-        Generator that yields user-defined spatial mappings.
-        User-defined means across operational array dimensions.
-        For example, this might yield {'D1': (C, 16), 'D2': (K,16)}
-        In essence it works as follows:
-        for each operational array dimension oa_dim (D1, D2, ...):
-          for each layer operand layer_op (W, I, O, ...):
-            if oa_dim not in served_dimensions(layer_op):
-                continue
-            else:
-                for layer dimensions layer_dim (B, K, ...) in the layer:
-                    if layer_dim is irrelevant for layer_op:
-                            layer_dim can be unrolled maximally
-                    if layer_dim is not irrelevant for layer_op:
-                      layer_dim can be unrolled if the BW allows it (assumes flexible "bus" reads)
-        """
         core_id = self.layer.core_allocation
         core: Core = self.accelerator.get_core(core_id=core_id)
         operational_array: OperationalArray = core.operational_array
         oa_dims = operational_array.dimensions
+        oa_dims_copy = operational_array.dimensions.copy()
         memory_hierarchy: MemoryHierarchy = core.memory_hierarchy
         innermost_levels = memory_hierarchy.get_inner_memories()
+        defined_mapping = self.defined_mapping
 
         # For every operational array dimension, we initialize it by maximally unrolling all layer dimensions.
         # Later these will be restricted if the memory structure doesn't allow for this unrolling
+
+        if defined_mapping is not None:
+            for oa_dim in oa_dims:
+                if defined_mapping.get(oa_dim.name) is not None:
+                    oa_dims_copy.remove(oa_dim)
         oa_dim_unrolling = {
             oa_dim: {
                 layer_dim: int(min(layer_size, oa_dim.size))
                 for layer_dim, layer_size in self.layer.loop_dim_size.items()
             }
-            for oa_dim in oa_dims
+            for oa_dim in oa_dims_copy
         }
 
         for memory_level in innermost_levels:
@@ -127,6 +136,7 @@ class UserSpatialMappingGenerator:
                 for (oa_dim_name, unrolling) in zip(oa_dim_names, combination)
                 if unrolling is not None
             }
+            user_spatial_mapping.update(defined_mapping)
             yield user_spatial_mapping
 
     @staticmethod

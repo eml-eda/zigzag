@@ -5,11 +5,11 @@ A crucial part in this is the mapping of the algorithmic computations onto the c
 
 ## Installation
 
-Please take a look at the [Installation](https://zigzag-project.github.io/zigzag/installation.html) page of our documentation.
+Please take a look at the [Installation](https://kuleuven-micas.github.io/zigzag/installation.html) page of our documentation.
 
 ## Getting Started
 
-Please take a look at the [Getting Started](https://zigzag-project.github.io/zigzag/getting-started.html) page on how to get started using ZigZag.
+Please take a look at the [Getting Started](https://kuleuven-micas.github.io/zigzag/getting-started.html) page on how to get started using ZigZag.
 
 Also, a Jupyter Notebook based demo is prepared for new users [here](https://github.com/ZigZag-Project/zigzag-demo).
 
@@ -51,3 +51,5 @@ L. Mei, K. Goetschalckx, A. Symons and M. Verhelst, " DeFiNES: Enabling Fast Exp
 
 #### Extend ZigZag to support multi-core layer-fused scheduling
 A. Symons, L. Mei, S. Colleman, P. Houshmand, S. Karl and M. Verhelst, “Towards Heterogeneous Multi-core Accelerators Exploiting Fine-grained Scheduling of Layer-Fused Deep Neural Networks”, <i>arXiv e-prints</i>, 2022. doi:10.48550/arXiv.2212.10612. [paper](https://arxiv.org/abs/2212.10612), [github](https://github.com/ZigZag-Project/stream)
+
+S. Karl, A. Symons, N. Fasfous and M. Verhelst, "Genetic Algorithm-based Framework for Layer-Fused Scheduling of Multiple DNNs on Multi-core Systems," 2023 Design, Automation & Test in Europe Conference & Exhibition (DATE), Antwerp, Belgium, 2023, pp. 1-6, doi: 10.23919/DATE56975.2023.10137070. [paper](https://ieeexplore.ieee.org/document/10137070), [slides](https://www.dropbox.com/s/rv8qiko59h4pp0s/Genetic%20Algorithm-based%20Framework%20for.pptx?dl=0), [video](https://www.dropbox.com/s/12v94stvevj9xns/Genetic%20Algorithm-based%20Framework%20for.mp4?dl=0)
