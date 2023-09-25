@@ -204,7 +204,7 @@ class MemoryAllocator:
             if size <= mem_capacity:
                 sizes.append(size)
             else:
-                if i == 0:  # This means we can't even store the already allocated loops
+                if i == 0:#and not(all([lp.type=='spatial' for lp in loops])):  # This means we can't even store the already allocated loops
                     raise MemoryTooSmallException(
                         f"Memory capacity overflow for mem_op {mem_op}. loops={loops} size={size} mem_capacity={mem_capacity}"
                     )

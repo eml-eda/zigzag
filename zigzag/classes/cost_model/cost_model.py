@@ -8,7 +8,8 @@ from zigzag.classes.mapping.combined_mapping import FourWayDataMoving
 from zigzag.utils import pickle_deepcopy
 
 logger = logging.getLogger(__name__)
-
+# contrib
+from math import prod
 
 class PortActivity:
     """Class that collects all the data transfer rate (periodic) information for each DTL (data transfer link)."""
@@ -202,7 +203,7 @@ class CostModelEvaluation:
         self.spatial_mapping = spatial_mapping
         self.temporal_mapping = temporal_mapping
         self.access_same_data_considered_as_no_access = (
-            access_same_data_considered_as_no_access
+            not access_same_data_considered_as_no_access
         )
 
         self.core_id = layer.core_allocation
@@ -655,11 +656,45 @@ class CostModelEvaluation:
 
         4) Finally, we combine the stall/slack of each memory port to get the final latency.
         """
+        # diana contrib
+        self.calc_multiplicity_l2_and_transfer_overheads()
         self.calc_double_buffer_flag()
         self.calc_allowed_and_real_data_transfer_cycle_per_DTL()
         self.combine_data_transfer_rate_per_physical_port()
         self.calc_data_loading_offloading_latency()
         self.calc_overall_latency()
+
+    def calc_multiplicity_l2_and_transfer_overheads(self):
+        multiplicity_l2={key:prod([v[1] for v in val[len(val)-1]]) for (key,val) in self.temporal_mapping.mapping_dic_stationary.items()}
+        # diana contrib
+        multiplicity_l2['W']=max([multiplicity_l2['O'],multiplicity_l2['I']])
+        multiplicity_l2['O']=multiplicity_l2['W']
+        tmap=self.temporal_mapping.mapping_dic_stationary
+        lsize=self.temporal_mapping.layer_node.loop_dim_size
+        relmap={key:{'r':val['r']+sorted([v_[0] for k_,v_ in val['pr'].items()])[::-1],'ir':val['ir']}\
+                for (key,val) in self.temporal_mapping.layer_node.operand_loop_dim.items()}
+        multiplicity_rel_L2={operand:{reldim:prod([val[1] for val in tmap[operand][len(tmap[operand])-1] if val[0]==reldim])\
+                for reldim in relmap[operand]['r']} for operand in self.temporal_mapping.operand_list}
+        for comm in set(relmap['O']['r']).intersection(set(relmap['I']['r'])):
+            multiplicity_rel_L2['O'][comm]=max([multiplicity_rel_L2['O'][comm],multiplicity_rel_L2['I'][comm]])
+        def get_transfer_calls_per_time_from_to_l2(operand):
+            if operand not in ['O','I']:
+                return 1
+            len_rel_map_operand=len(relmap[operand]['r'])
+            for ind in range(len_rel_map_operand)[::-1]:
+                if ind==0:
+                    return 1
+                if multiplicity_rel_L2[operand][relmap[operand]['r'][ind]]!=1:
+                    return prod([lsize[relmap[operand]['r'][prod_lp]]/multiplicity_rel_L2[operand][relmap[operand]['r'][prod_lp]] for prod_lp in range(ind)])
+        self.transfer_calls_per_time_from_to_l2={operand:get_transfer_calls_per_time_from_to_l2(operand) for operand in self.temporal_mapping.operand_list}
+        self.relmap=relmap
+        self.multiplicity_l2=multiplicity_l2
+        self.multiplicity_rel_L2=multiplicity_rel_L2
+
+
+        
+        
+
 
     def calc_double_buffer_flag(self):
         """This function checks the double-buffer possibility for each operand at each memory level
@@ -671,12 +706,13 @@ class CostModelEvaluation:
             """ start with False for each operand at the lowest arch level (MAC array level) """
             double_buffer_true[layer_op] = [False]
             for mem_lv in range(0, self.mapping_int.mem_level[layer_op]):
-                if self.effective_mem_utili_shared[layer_op][mem_lv] <= 0.5:
+                if False:#self.effective_mem_utili_shared[layer_op][mem_lv] <= 0.5:
                     double_buffer_true[layer_op].append(True)
-                elif (
+                elif False:
+                    """(
                     self.effective_mem_utili_individual[layer_op][mem_lv]
                     <= 1 - self.effective_mem_utili_shared[layer_op][mem_lv]
-                ):
+                ):"""
                     double_buffer_true[layer_op].append(True)
                     shared_mem_list = get_shared_mem_list(
                         mem_op, mem_lv, self.mem_sharing_list
@@ -1100,18 +1136,33 @@ class CostModelEvaluation:
 
         """ Total latency without the initial data loading and the final data off-loading """
         latency_total0 = ideal_temporal_cycle + self.SS_comb
+        if self.layer.layer_attrs['cost_model']:
+            latency_total0 -= self.SS_comb
         MAC_utilization0 = ideal_cycle / latency_total0
 
         """ Total latency with the initial data loading, but without the final data off-loading """
-        latency_total1 = ideal_temporal_cycle + self.SS_comb + self.data_loading_cycle
+        #print(f"multiplicity_l2 {self.multiplicity_l2} data loading per pair {self.data_loading_cc_pair_combined_per_op} transfer calls {self.transfer_calls_per_time_from_to_l2}")
+        if self.layer.layer_attrs['cost_model']:
+            loading_cycles=sum([self.multiplicity_l2[operand]*(self.data_loading_cc_pair_combined_per_op[operand][1]+self.transfer_calls_per_time_from_to_l2[operand]*70) for operand in self.temporal_mapping.operand_list if operand!='O'])
+        # ^ CONTRIB
+        else:
+            loading_cycles=self.data_loading_cycle
+        latency_total1 = ideal_temporal_cycle + self.SS_comb + loading_cycles
         MAC_utilization1 = ideal_cycle / latency_total1
 
         """ Total latency with both the initial data loading and the final data off-loading """
+        #contrib
+        operands={'input':[op for op in self.temporal_mapping.operand_list if op!='O'],'output':['O']}
+        if self.layer.layer_attrs['cost_model']:
+            offloading_cycles=sum([self.multiplicity_l2[operand]*(self.data_offloading_cc_pair_combined[1]+self.transfer_calls_per_time_from_to_l2[operand]*70) for operand in self.temporal_mapping.operand_list if operand=='O'])
+        # ^ CONTRIB
+        else:
+            offloading_cycles=self.data_offloading_cycle
         latency_total2 = (
             ideal_temporal_cycle
             + self.SS_comb
-            + self.data_loading_cycle
-            + self.data_offloading_cycle
+            + loading_cycles
+            + offloading_cycles
         )
         MAC_utilization2 = ideal_cycle / latency_total2
 

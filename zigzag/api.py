@@ -9,6 +9,7 @@ def get_hardware_performance_zigzag(
     opt="latency",
     dump_filename_pattern="outputs/{datetime}.json",
     pickle_filename="outputs/list_of_cmes.pickle",
+    temp_mapping=False
 ):
     # Initialize the logger
     import logging as _logging
@@ -30,7 +31,10 @@ def get_hardware_performance_zigzag(
         raise NotImplementedError(
             "Optimization criterion 'opt' should be either 'energy' or 'latency' or 'EDP'."
         )
-
+    if temp_mapping:
+        temp_stage=TemporalOrderingConversionStage
+    else:
+        temp_stage=LomaStage
     # Check workload format and based on it select the correct workload parser stage
     try:
         if workload.split(".")[-1] == "onnx":
@@ -39,7 +43,6 @@ def get_hardware_performance_zigzag(
             workload_parser_stage = WorkloadParserStage
     except:
         workload_parser_stage = WorkloadParserStage
-
     mainstage = MainStage(
         [  # Initialize the MainStage as entry point
             workload_parser_stage,  # Parse the ONNX Model into the workload
@@ -52,8 +55,9 @@ def get_hardware_performance_zigzag(
             opt_stage,  # Reduce all CMEs, returning minimal energy/latency one
             SpatialMappingGeneratorStage,  # Generate multiple spatial mappings (SM)
             opt_stage,  # Reduce all CMEs, returning minimal energy/latency one
-            LomaStage,  # Generate multiple temporal mappings (TM)
+            #LomaStage,  # Generate multiple temporal mappings (TM)
             # TemporalOrderingConversionStage,  # Based on the fixed temporal mapping order, generate one temporal mapping (TM)
+            temp_stage,
             CostModelStage,  # Evaluate generated SM and TM through cost model
         ],
         accelerator=accelerator,  # required by AcceleratorParserStage
@@ -61,7 +65,7 @@ def get_hardware_performance_zigzag(
         mapping=mapping,  # required by workload_parser_stage
         dump_filename_pattern=dump_filename_pattern,  # output file save pattern
         pickle_filename=pickle_filename,  # filename for pickled list of cmes
-        loma_lpf_limit=6,  # required by LomaStage
+        loma_lpf_limit=9,  # required by LomaStage
         loma_show_progress_bar=True,
         # If we need access the same input data multiple times from the innermost memory level and the data size is smaller than the memory read bw,
         # take into account only one-time access cost (assume the data can stay at the output pins of the memory as long as it is needed).

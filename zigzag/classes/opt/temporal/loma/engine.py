@@ -64,6 +64,8 @@ class LomaEngine:
         ).memory_hierarchy
 
         self.show_progress_bar = kwargs.get("loma_show_progress_bar", False)
+        # contrib
+        self.unmanaged_loops=layer.layer_attrs['fixed_loops']#['FX','FY','C'] # actually it would be better to put it as part of the user mapping
 
     def run(self):
         """
@@ -158,7 +160,10 @@ class LomaEngine:
             tl_dim,
             tl_size,
         ) in self.temporal_loop_dim_size.items():  # tl = temporal loop
-            factors = factorint(tl_size)
+            if tl_dim in self.unmanaged_loops:
+                factors={tl_size:1}
+            else:
+                factors = factorint(tl_size)
             pfs = []
             counts = []
             for pf, multiplicity in factors.items():
@@ -188,6 +193,8 @@ class LomaEngine:
 
         # Limit the number of lpfs (if this is set in the settings)
         self.limit_lpfs()
+        # contrib
+        
 
         # Compute how many total permuatations we will have to consider
         self.compute_nb_permutations()
@@ -272,4 +279,4 @@ class LomaEngine:
         Generator that yields all orderings of the temporal loops.
         """
         # The lpfs are stored in self.lpfs
-        return permutations(self.lpfs)
+        return permutations(self.lpfs,self.unmanaged_loops)
