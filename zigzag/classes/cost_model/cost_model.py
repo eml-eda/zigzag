@@ -1141,7 +1141,6 @@ class CostModelEvaluation:
         MAC_utilization0 = ideal_cycle / latency_total0
 
         """ Total latency with the initial data loading, but without the final data off-loading """
-        #print(f"multiplicity_l2 {self.multiplicity_l2} data loading per pair {self.data_loading_cc_pair_combined_per_op} transfer calls {self.transfer_calls_per_time_from_to_l2}")
         if self.layer.layer_attrs['cost_model']:
             loading_cycles=sum([self.multiplicity_l2[operand]*(self.data_loading_cc_pair_combined_per_op[operand][1]+self.transfer_calls_per_time_from_to_l2[operand]*70) for operand in self.temporal_mapping.operand_list if operand!='O'])
         # ^ CONTRIB
