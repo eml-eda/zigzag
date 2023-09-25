@@ -57,14 +57,8 @@ def init(multiset):
         h = ListElement(item, h)
     return h, h.nth(len(multiset) - 2), h.nth(len(multiset) - 1)
 
-<<<<<<< HEAD
 def visit(h,original_multiset,unmanaged_loops):
     """Converts our bespoke linked list to a python list."""
-=======
-
-## Converts our bespoke linked list to a python list.
-def visit(h):
->>>>>>> 6484207f890184b67e139a24aeb9e4d3d3e96723
     o = h
     l = []
     while o is not None:
