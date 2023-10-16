@@ -1182,6 +1182,7 @@ class CostModelEvaluation:
         """ Total latency with the initial data loading, but without the final data off-loading """
         if self.layer.layer_attrs['cost_model']:
             loading_cycles=sum([self.multiplicity_l2[operand]*(self.data_loading_cc_pair_combined_per_op[operand][1]+self.transfer_calls_per_time_from_to_l2[operand]*70) for operand in self.temporal_mapping.operand_list if operand!='O'])
+            self.loading_cycles_per_op=[(operand,self.multiplicity_l2[operand]*(self.data_loading_cc_pair_combined_per_op[operand][1]+self.transfer_calls_per_time_from_to_l2[operand]*70)) for operand in self.temporal_mapping.operand_list if operand!='O']
         # ^ CONTRIB
         else:
             loading_cycles=self.data_loading_cycle
