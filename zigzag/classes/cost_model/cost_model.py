@@ -709,18 +709,17 @@ class CostModelEvaluation:
     def calc_multiplicity_l2_and_transfer_overheads(self):
         multiplicity_l2={key:prod([v[1] for v in val[len(val)-1]]) for (key,val) in self.temporal_mapping.mapping_dic_stationary.items()}
         # diana contrib
-        multiplicity_l2['W']=max([multiplicity_l2['O'],multiplicity_l2['I']])
-        multiplicity_l2['O']=multiplicity_l2['W']
+        multiplicity_l2={key:(max(multiplicity_l2.values()) if key=='O' or key=='W' else val) for key,val in multiplicity_l2.items()}
         tmap=self.temporal_mapping.mapping_dic_stationary
         lsize=self.temporal_mapping.layer_node.loop_dim_size
         relmap={key:{'r':val['r']+sorted([v_[0] for k_,v_ in val['pr'].items()])[::-1],'ir':val['ir']}\
                 for (key,val) in self.temporal_mapping.layer_node.operand_loop_dim.items()}
         multiplicity_rel_L2={operand:{reldim:prod([val[1] for val in tmap[operand][len(tmap[operand])-1] if val[0]==reldim])\
                 for reldim in relmap[operand]['r']} for operand in self.temporal_mapping.operand_list}
-        for comm in set(relmap['O']['r']).intersection(set(relmap['I']['r'])):
-            multiplicity_rel_L2['O'][comm]=max([multiplicity_rel_L2['O'][comm],multiplicity_rel_L2['I'][comm]])
+        for comm in set(relmap['O']['r']).intersection(set([val for key,dictval in relmap.items() if key not in ['W','O'] for val in dictval['r']])):
+            multiplicity_rel_L2['O'][comm]=max([dictval[comm] for key,dictval in multiplicity_rel_L2.items() if comm in dictval])
         def get_transfer_calls_per_time_from_to_l2(operand):
-            if operand not in ['O','I']:
+            if operand=='W':
                 return 1
             len_rel_map_operand=len(relmap[operand]['r'])
             for ind in range(len_rel_map_operand)[::-1]:
@@ -1199,7 +1198,6 @@ class CostModelEvaluation:
             offloading_cycles=self.data_offloading_cycle
         latency_total2 = (
             ideal_temporal_cycle
-            + self.SS_comb
             + loading_cycles
             + offloading_cycles
         )

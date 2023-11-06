@@ -65,7 +65,7 @@ def get_hardware_performance_zigzag(
         mapping=mapping,  # required by workload_parser_stage
         dump_filename_pattern=dump_filename_pattern,  # output file save pattern
         pickle_filename=pickle_filename,  # filename for pickled list of cmes
-        loma_lpf_limit=9,  # required by LomaStage
+        loma_lpf_limit=7,  # required by LomaStage
         loma_show_progress_bar=True,
         # If we need access the same input data multiple times from the innermost memory level and the data size is smaller than the memory read bw,
         # take into account only one-time access cost (assume the data can stay at the output pins of the memory as long as it is needed).

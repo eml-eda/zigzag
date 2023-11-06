@@ -255,7 +255,8 @@ class LayerNode:
     # a in range(0,A,1) and b in range(0,B,1) according to the equation c = sa * a + sb * b.
     # sa and sb thus represent the scaling of a, resp. b.
     def calc_pr_dimension_size(sa, A, sb, B):
-        return int(A * B - max(0, B - (sa / gcd(sa, sb))) * (A - (sb / gcd(sa, sb))))
+        return sa*A+sb*(B-1)
+        #return int(A * B - max(0, B - (sa / gcd(sa, sb))) * (A - (sb / gcd(sa, sb))))
 
     @staticmethod
     def return_lambda(equal_sign_right):
