@@ -698,8 +698,8 @@ class CostModelEvaluation:
 
         4) Finally, we combine the stall/slack of each memory port to get the final latency.
         """
-        # diana contrib
-        self.calc_multiplicity_l2_and_transfer_overheads()
+        if not self.layer.layer_attrs['std_cost_model']:
+            self.calc_multiplicity_l2_and_transfer_overheads()
         self.calc_double_buffer_flag()
         self.calc_allowed_and_real_data_transfer_cycle_per_DTL()
         self.combine_data_transfer_rate_per_physical_port()
@@ -747,9 +747,8 @@ class CostModelEvaluation:
             """ start with False for each operand at the lowest arch level (MAC array level) """
             double_buffer_true[layer_op] = [False]
             for mem_lv in range(0, self.mapping_int.mem_level[layer_op]):
-                if False:#self.effective_mem_utili_shared[layer_op][mem_lv] <= 0.5:
+                if self.effective_mem_utili_shared[layer_op][mem_lv] <= 0.5:
                     double_buffer_true[layer_op].append(True)
-                elif False:
                     """(
                     self.effective_mem_utili_individual[layer_op][mem_lv]
                     <= 1 - self.effective_mem_utili_shared[layer_op][mem_lv]
@@ -1174,12 +1173,12 @@ class CostModelEvaluation:
 
         # Total latency without the initial data loading and the final data off-loading
         latency_total0 = ideal_temporal_cycle + self.SS_comb
-        if self.layer.layer_attrs['cost_model']:
+        if not self.layer.layer_attrs['std_cost_model']:
             latency_total0 -= self.SS_comb
         MAC_utilization0 = ideal_cycle / latency_total0
 
         """ Total latency with the initial data loading, but without the final data off-loading """
-        if self.layer.layer_attrs['cost_model']:
+        if not self.layer.layer_attrs['std_cost_model']:
             loading_cycles=sum([self.multiplicity_l2[operand]*(self.data_loading_cc_pair_combined_per_op[operand][1]+self.transfer_calls_per_time_from_to_l2[operand]*70) for operand in self.temporal_mapping.operand_list if operand!='O'])
             self.loading_cycles_per_op=[(operand,self.multiplicity_l2[operand]*(self.data_loading_cc_pair_combined_per_op[operand][1]+self.transfer_calls_per_time_from_to_l2[operand]*70)) for operand in self.temporal_mapping.operand_list if operand!='O']
         # ^ CONTRIB
@@ -1191,7 +1190,7 @@ class CostModelEvaluation:
         """ Total latency with both the initial data loading and the final data off-loading """
         #contrib
         operands={'input':[op for op in self.temporal_mapping.operand_list if op!='O'],'output':['O']}
-        if self.layer.layer_attrs['cost_model']:
+        if not self.layer.layer_attrs['std_cost_model']:
             offloading_cycles=sum([self.multiplicity_l2[operand]*(self.data_offloading_cc_pair_combined[1]+self.transfer_calls_per_time_from_to_l2[operand]*70) for operand in self.temporal_mapping.operand_list if operand=='O'])
         # ^ CONTRIB
         else:
