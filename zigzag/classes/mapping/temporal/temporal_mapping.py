@@ -129,22 +129,6 @@ class TemporalMapping:
 
         self.cycle_cabl_level = cycle_cabl_level
         self.total_cycle = total_cycle[0]
-        # diana contrib
-        # elements that are not OY padded
-        if self.layer_node.layer_attrs['cost_model']:
-            spatial_mapping_sizes=prod([dim[1] for (key,dim) in self.layer_node.user_spatial_mapping.items()])
-            no_pad_size=self.layer_node.loop_dim_size['K']*(self.layer_node.loop_dim_size['OY']-2\
-                        *self.layer_node.padding['IY'][0])*self.layer_node.loop_dim_size['OX']
-            pad_size=self.layer_node.loop_dim_size['K']*2*self.layer_node.loop_dim_size['OX']
-            contrib=[((self.layer_node.loop_dim_size['C']*(self.layer_node.loop_dim_size['FY']-pad)*\
-                    self.layer_node.loop_dim_size['FX'])+(self.layer_node.loop_dim_size['C']*\
-                    (self.layer_node.loop_dim_size['FY']-pad)*2)+23) for pad in range(self.layer_node.padding['IY'][0]+1)]
-            self.contrib=contrib
-            self.pad_size=pad_size
-            self.no_pad_size=no_pad_size
-            self.spatial_mapping_sizes=spatial_mapping_sizes
-            self.total_cycle = sum([ceil((no_pad_size if pad==0 else pad_size)/spatial_mapping_sizes)*\
-                                    contrib[pad] for pad in range(self.layer_node.padding['IY'][0]+1)])
 
     def calc_top_r_and_ir_loop(self):
         # top_ir_loop_size: For each memory level, from top to bottom, the product of top few irrelevant loops.
