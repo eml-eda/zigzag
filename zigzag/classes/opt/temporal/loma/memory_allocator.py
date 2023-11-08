@@ -124,16 +124,12 @@ class MemoryAllocator:
         mem_ops = node.operands
         # Then select only the mem operands that are required for this layer (e.g. pooling has no weights so one mem op less)
         mem_ops = [mem_op for mem_op in mem_ops if mem_op in self.mem_ops]
-
+        
+        buff_mem=0
+        db_support=False
         # Get the capacity of this memory node (in bits)
-        if 'buffer' in self.layer.layer_attrs:
-            # buffer for the cores of the accelerator (weights dimensions)
-            buff_mem=2*self.layer.loop_dim_size['C']*self.layer.loop_dim_size['FY']*self.layer.loop_dim_size['FX']
-            # buff for each core
-            if 'num_cores' in self.layer.layer_attrs:
-                buff_mem*=self.layer.layer_attrs['num_cores']
-            # bias
-            buff_mem+=self.layer.loop_dim_size['K']*4
+        if 'cost_model' in self.layer.layer_attrs and self.layer.layer_attrs['cost_model'] is not None and hasattr(self.layer.layer_attrs['cost_model'],'get_buff_db_for_mem'):
+            buff_mem,db_support=self.layer.layer_attrs['cost_model'].get_buff_db_for_mem(self,node.memory_instance)
             # needs to be in bits
             buff_mem*=8
         mem_capacity = node.memory_instance.size-buff_mem
@@ -141,7 +137,7 @@ class MemoryAllocator:
         # For all the mem_ops, find the max amount of unallocated loops we could allocate
         all_sizes = {}
         for mem_op in mem_ops:
-            sizes = self.calc_size_slices(mem_op, mem_capacity)
+            sizes = self.calc_size_slices(mem_op, mem_capacity,db_support)
             all_sizes[mem_op] = sizes
 
         # Now that we have this for all the mem_ops, call function that finds the best
@@ -193,7 +189,7 @@ class MemoryAllocator:
     # slices of the unallocated loops, with 'mem_capacity' as an upper bound.
     # @param mem_op
     # @param mem_capacity Capacity of the memory node in bits.
-    def calc_size_slices(self, mem_op: str, mem_capacity: int):
+    def calc_size_slices(self, mem_op: str, mem_capacity: int,db_support: bool=False):
 
         # Already allocated loops for this mem_op
         allocated_loops = self.allocated[mem_op]
@@ -202,8 +198,9 @@ class MemoryAllocator:
         unallocated_loops = self.unallocated[mem_op]
         sizes = []
 
-        all_loops=(allocated_loops+unallocated_loops[:len(unallocated_loops)+1])
-        all_loops_size=self.calc_loops_size(all_loops,mem_op,unallocated_loops)
+        if db_support:
+            all_loops=(allocated_loops+unallocated_loops[:len(unallocated_loops)+1])
+            all_loops_size=self.calc_loops_size(all_loops,mem_op,unallocated_loops)
 
         for i in range(
             len(unallocated_loops) + 1
@@ -216,8 +213,9 @@ class MemoryAllocator:
             )  # Join them with already allocated loops
             size = self.calc_loops_size(loops, mem_op, unallocated_loops)
             # double buffering
-            if len(unallocated_loops[i:])>0 and size<all_loops_size and 'double_buffering' in self.layer.layer_attrs:
-                size*=2
+            if db_support:
+                if len(unallocated_loops[i:])>0 and size<all_loops_size:
+                    size*=2
             if size <= mem_capacity:
                 sizes.append(size)
             else:

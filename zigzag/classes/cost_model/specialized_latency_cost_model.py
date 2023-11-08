@@ -1,39 +1,41 @@
 from math import ceil
+from typing import Callable
 
 def mock_func(*args):
     return None
+def mock_func_buff_db(*args):
+    return 0,False
 
-
-def default_ideal_cycles(spec_cost_model: SpecializedLatencyCostModel):
+def default_ideal_cycles(spec_cost_model: 'SpecializedLatencyCostModel'):
     spec_cost_model.cost_model.ideal_cycle = ceil(
         spec_cost_model.cost_model.layer.total_MAC_count
         / spec_cost_model.cost_model.accelerator.get_core(
-            self.core_id
+            spec_cost_model.cost_model.core_id
         ).operational_array.total_unit_count
     )
 
 
-def default_ideal_temporal_cycles(spec_cost_model: SpecializedLatencyCostModel):
+def default_ideal_temporal_cycles(spec_cost_model: 'SpecializedLatencyCostModel'):
     spec_cost_model.cost_model.ideal_temporal_cycle = (
         spec_cost_model.cost_model.mapping_int.temporal_mapping.total_cycle
     )
 
 
-def default_MAC_spatial_utilization(spec_cost_model: SpecializedLatencyCostModel):
+def default_MAC_spatial_utilization(spec_cost_model: 'SpecializedLatencyCostModel'):
     spec_cost_model.cost_model.MAC_spatial_utilization = (
         spec_cost_model.cost_model.ideal_cycle
         / spec_cost_model.cost_model.ideal_temporal_cycle
     )
 
 
-def default_latency_total0(spec_cost_model: SpecializedLatencyCostModel):
+def default_latency_total0(spec_cost_model: 'SpecializedLatencyCostModel'):
     spec_cost_model.cost_model.latency_total0 = (
         spec_cost_model.cost_model.ideal_temporal_cycle
         + spec_cost_model.cost_model.SS_comb
     )
 
 
-def default_latency_total1(spec_cost_model: SpecializedLatencyCostModel):
+def default_latency_total1(spec_cost_model: 'SpecializedLatencyCostModel'):
     spec_cost_model.cost_model.latency_total1 = (
         spec_cost_model.cost_model.ideal_temporal_cycle
         + spec_cost_model.cost_model.SS_comb
@@ -41,7 +43,7 @@ def default_latency_total1(spec_cost_model: SpecializedLatencyCostModel):
     )
 
 
-def default_latency_total2(spec_cost_model: SpecializedLatencyCostModel):
+def default_latency_total2(spec_cost_model: 'SpecializedLatencyCostModel'):
     spec_cost_model.cost_model.latency_total2 = (
         spec_cost_model.cost_model.ideal_temporal_cycle
         + spec_cost_model.cost_model.data_loading_cycle
@@ -49,21 +51,21 @@ def default_latency_total2(spec_cost_model: SpecializedLatencyCostModel):
     )
 
 
-def default_MAC_utilization0(spec_cost_model: SpecializedLatencyCostModel):
+def default_MAC_utilization0(spec_cost_model: 'SpecializedLatencyCostModel'):
     spec_cost_model.cost_model.MAC_utilization0 = (
         spec_cost_model.cost_model.ideal_cycle
         / spec_cost_model.cost_model.latency_total0
     )
 
 
-def default_MAC_utilization1(spec_cost_model: SpecializedLatencyCostModel):
+def default_MAC_utilization1(spec_cost_model: 'SpecializedLatencyCostModel'):
     spec_cost_model.cost_model.MAC_utilization1 = (
         spec_cost_model.cost_model.ideal_cycle
         / spec_cost_model.cost_model.latency_total1
     )
 
 
-def default_MAC_utilization2(spec_cost_model: SpecializedLatencyCostModel):
+def default_MAC_utilization2(spec_cost_model: 'SpecializedLatencyCostModel'):
     spec_cost_model.cost_model.MAC_utilization2 = (
         spec_cost_model.cost_model.ideal_cycle
         / spec_cost_model.cost_model.latency_total2
@@ -84,17 +86,18 @@ NEEDED_ATTRS_AND_DEFAULT_FUNC = (
 
 
 class SpecializedLatencyCostModel:
-    def __init__(self, pipeline):
+    def __init__(self, pipeline,get_buff_db_for_mem:Callable=mock_func_buff_db):
         self.pipeline = pipeline
         self.cost_model = None
         self.latency_0 = 0
         self.latency_1 = 0
         self.latency_2 = 0
+        self.get_buff_db_for_mem=get_buff_db_for_mem
 
     def add_function_to_pipeline(self, func):
         self.pipeline.append(func)
 
-    def add_cost_model(self, cost_model):
+    def set_cost_model(self, cost_model):
         self.cost_model = cost_model
 
     def default_if_not_finished(self):

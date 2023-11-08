@@ -708,6 +708,7 @@ class CostModelEvaluation:
         else:
             # specialized cost model
             specialized_cost_model=self.layer.layer_attrs['cost_model']
+            specialized_cost_model.set_cost_model(self)
             specialized_cost_model.run()
 
     ## This function checks the double-buffer possibility for each operand at each memory level
