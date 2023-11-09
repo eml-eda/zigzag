@@ -720,13 +720,14 @@ class CostModelEvaluation:
             mem_op = self.layer_op_to_mem_op[layer_op]
             """ start with False for each operand at the lowest arch level (MAC array level) """
             double_buffer_true[layer_op] = [False]
+
             for mem_lv in range(0, self.mapping_int.mem_level[layer_op]):
                 if self.effective_mem_utili_shared[layer_op][mem_lv] <= 0.5:
                     double_buffer_true[layer_op].append(True)
-                    """(
+                elif(
                     self.effective_mem_utili_individual[layer_op][mem_lv]
                     <= 1 - self.effective_mem_utili_shared[layer_op][mem_lv]
-                ):"""
+                ):
                     double_buffer_true[layer_op].append(True)
                     shared_mem_list = get_shared_mem_list(
                         mem_op, mem_lv, self.mem_sharing_list
