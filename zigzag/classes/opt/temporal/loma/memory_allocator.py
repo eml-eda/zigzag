@@ -333,7 +333,7 @@ class MemoryAllocator:
         found_sol=False
         for i in range(nb_combinations):
             size_comb = 0
-            accesses_comb = 0
+            accesses_comb = 1
             current_loop_idxs = []
             unfeasible_sol=False
             for mem_op_idx, mem_op in enumerate(mem_ops):
@@ -348,7 +348,7 @@ class MemoryAllocator:
                         unfeasible_sol=True
                         break
                 size_comb += all_sizes[mem_op][current_loop_idx]
-                accesses_comb += all_accesses[mem_op][current_loop_idx]
+                accesses_comb *= all_accesses[mem_op][current_loop_idx]
             if unfeasible_sol:
                 continue
             if size_comb > mem_capacity:
