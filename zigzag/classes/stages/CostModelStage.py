@@ -32,6 +32,7 @@ class CostModelStage(Stage):
         spatial_mapping,
         temporal_mapping,
         access_same_data_considered_as_no_access=True,
+        cost_model_class=CostModelEvaluation,
         **kwargs
     ):
         super().__init__(list_of_callables, **kwargs)
@@ -48,10 +49,11 @@ class CostModelStage(Stage):
             temporal_mapping,
             access_same_data_considered_as_no_access,
         )
+        self.cost_model_class=cost_model_class
 
     ## Run the cost model stage by calling the internal zigzag cost model with the correct inputs.
     def run(self) -> Generator[Tuple[CostModelEvaluation, Any], None, None]:
-        self.cme = CostModelEvaluation(
+        self.cme = self.cost_model_class(
             accelerator=self.accelerator,
             layer=self.layer,
             spatial_mapping=self.spatial_mapping,

@@ -65,7 +65,7 @@ class LomaEngine:
 
         self.show_progress_bar = kwargs.get("loma_show_progress_bar", False)
         # contrib
-        self.unmanaged_loops=layer.layer_attrs['fixed_loops']#['FX','FY','C'] # actually it would be better to put it as part of the user mapping
+        self.unordered_loops=layer.layer_attrs["unordered_loops"]
 
     ## Runs the LomaEngine
     # @return Generator that yields all temporal mappings
@@ -155,7 +155,7 @@ class LomaEngine:
             tl_dim,
             tl_size,
         ) in self.temporal_loop_dim_size.items():  # tl = temporal loop
-            if tl_dim in self.unmanaged_loops:
+            if tl_dim in self.unordered_loops:
                 factors={tl_size:1}
             else:
                 factors = factorint(tl_size)
@@ -270,4 +270,4 @@ class LomaEngine:
     ## Generator that yields all orderings of the temporal loops.
     def og(self):
         # The lpfs are stored in self.lpfs
-        return permutations(self.lpfs,self.unmanaged_loops)
+        return permutations(self.lpfs,self.unordered_loops)

@@ -1,6 +1,7 @@
+from typing import Type
 from zigzag.classes.stages import *
 import re
-
+from zigzag.classes.cost_model.cost_model import CostModelEvaluation
 
 def get_hardware_performance_zigzag(
     workload,
@@ -9,8 +10,9 @@ def get_hardware_performance_zigzag(
     opt="latency",
     dump_filename_pattern="outputs/{datetime}.json",
     pickle_filename="outputs/list_of_cmes.pickle",
-    temp_mapping=False,
-    lpf_limit: int = 6
+    temp_mapping: bool=False,
+    lpf_limit: int = 6,
+    cost_model_class: Type = CostModelEvaluation
 ):
     # Initialize the logger
     import logging as _logging
@@ -72,6 +74,7 @@ def get_hardware_performance_zigzag(
         # take into account only one-time access cost (assume the data can stay at the output pins of the memory as long as it is needed).
         # By default, if the parameter is not defined, it will be set as False internally.
         access_same_data_considered_as_no_access=True,
+        cost_model_class=cost_model_class,
     )
 
     # Launch the MainStage

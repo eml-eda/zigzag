@@ -57,21 +57,21 @@ def init(multiset):
         h = ListElement(item, h)
     return h, h.nth(len(multiset) - 2), h.nth(len(multiset) - 1)
 
-def visit(h,original_multiset,unmanaged_loops):
+def visit(h,original_multiset,unordered_loops):
     """Converts our bespoke linked list to a python list."""
     o = h
     l = []
     while o is not None:
         l.append(o.value)
         o = o.next
-    return [(name,size) for name,size in original_multiset if name in unmanaged_loops]+l
+    return [(name,size) for name,size in original_multiset if name in unordered_loops]+l
 
 
-def permutations(multiset,unmanaged_loops):
+def permutations(multiset,unordered_loops):
     """Generator providing all multiset permutations of a multiset."""
-    tmp_multi=[(name,size) for name,size in multiset if name not in unmanaged_loops]
+    tmp_multi=[(name,size) for name,size in multiset if name not in unordered_loops]
     h, i, j = init(tmp_multi)
-    yield visit(h,multiset,unmanaged_loops)
+    yield visit(h,multiset,unordered_loops)
     while j.next is not None or j.value < h.value:
         if j.next is not None and i.value >= j.next.value:
             s = j
@@ -84,7 +84,7 @@ def permutations(multiset,unmanaged_loops):
             i = t
         j = i.next
         h = t
-        yield visit(h,multiset,unmanaged_loops)
+        yield visit(h,multiset,unordered_loops)
 
 
 if __name__ == "__main__":

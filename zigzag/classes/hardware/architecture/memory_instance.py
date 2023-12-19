@@ -35,6 +35,7 @@ class MemoryInstance:
         min_w_granularity=None,
         mem_type: str = "sram",
         auto_cost_extraction: bool = False,
+        double_buffering_support: bool = False,
     ):
         if auto_cost_extraction:
             # Size must be a multiple of 8 when using CACTI
@@ -74,6 +75,7 @@ class MemoryInstance:
         self.w_port = w_port
         self.rw_port = rw_port
         self.latency = latency
+        self.double_buffering_support=double_buffering_support
         if not min_r_granularity:
             self.r_bw_min = r_bw
         else:

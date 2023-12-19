@@ -702,14 +702,7 @@ class CostModelEvaluation:
         self.calc_allowed_and_real_data_transfer_cycle_per_DTL()
         self.combine_data_transfer_rate_per_physical_port()
         self.calc_data_loading_offloading_latency()
-        if 'cost_model' not in self.layer.layer_attrs or self.layer.layer_attrs['cost_model'] is None:
-            # non specialized cost model
-            self.calc_overall_latency()
-        else:
-            # specialized cost model
-            specialized_cost_model=self.layer.layer_attrs['cost_model']
-            specialized_cost_model.set_cost_model(self)
-            specialized_cost_model.run()
+        self.calc_overall_latency()
 
     ## This function checks the double-buffer possibility for each operand at each memory level
     # (minimal memory BW requirement case) by comparing the physical memory size with the effective

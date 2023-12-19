@@ -125,14 +125,9 @@ class MemoryAllocator:
         # Then select only the mem operands that are required for this layer (e.g. pooling has no weights so one mem op less)
         mem_ops = [mem_op for mem_op in mem_ops if mem_op in self.mem_ops]
         
-        buff_mem=0
-        db_support=False
+        db_support=node.memory_instance.double_buffering_support
         # Get the capacity of this memory node (in bits)
-        if 'cost_model' in self.layer.layer_attrs and self.layer.layer_attrs['cost_model'] is not None and hasattr(self.layer.layer_attrs['cost_model'],'get_buff_db_for_mem'):
-            buff_mem,db_support=self.layer.layer_attrs['cost_model'].get_buff_db_for_mem(self,node.memory_instance)
-            # needs to be in bits
-            buff_mem*=8
-        mem_capacity = node.memory_instance.size-buff_mem
+        mem_capacity = node.memory_instance.size
 
         # For all the mem_ops, find the max amount of unallocated loops we could allocate
         all_sizes = {}
@@ -189,6 +184,7 @@ class MemoryAllocator:
     # slices of the unallocated loops, with 'mem_capacity' as an upper bound.
     # @param mem_op
     # @param mem_capacity Capacity of the memory node in bits.
+    # @param db_support Support of double buffering for this memory instance.
     def calc_size_slices(self, mem_op: str, mem_capacity: int,db_support: bool=False):
 
         # Already allocated loops for this mem_op
@@ -321,36 +317,18 @@ class MemoryAllocator:
         best_loop_idxs = [0 for mem_op in mem_ops]
         best_accesses = np.inf
         nb_combinations = prod(len(sizes) for sizes in all_sizes.values())
-        core_id = self.layer.core_allocation
-        memory_hierarchy: MemoryHierarchy = self.accelerator.get_core(
-            core_id
-        ).memory_hierarchy
-        memory_levels={mem_op:memory_hierarchy.get_memory_levels(mem_op) for mem_op in mem_ops}
-        fixed_loops_needed_now={mem_op:node==memory_levels[mem_op][len(memory_levels[mem_op])-2] for mem_op in mem_ops}
-        spatial_loops=[s[1]>1 for (sd,s) in self.layer.user_spatial_mapping.items()]
-        len_ordering_loops_fixed=len(self.ordering_loops_fixed)
-        loop_fixed_unallocated={mem_op:(sum(spatial_loops)+len_ordering_loops_fixed)-len(self.allocated[mem_op]) for mem_op in mem_ops}
-        found_sol=False
         for i in range(nb_combinations):
             size_comb = 0
-            accesses_comb = 1
+            accesses_comb = 0
             current_loop_idxs = []
-            unfeasible_sol=False
             for mem_op_idx, mem_op in enumerate(mem_ops):
                 this_max_nb_loops = all_max_nb_loops_list[mem_op_idx]
                 current_loop_idx = (
                     i // prod(all_max_nb_loops_list[mem_op_idx + 1 :])
                 ) % this_max_nb_loops
                 current_loop_idxs.append(current_loop_idx + loop_idx_offsets[mem_op])
-                # unfeasible solution
-                if fixed_loops_needed_now[mem_op]:
-                    if (current_loop_idx + loop_idx_offsets[mem_op])< loop_fixed_unallocated[mem_op]:
-                        unfeasible_sol=True
-                        break
                 size_comb += all_sizes[mem_op][current_loop_idx]
-                accesses_comb *= all_accesses[mem_op][current_loop_idx]
-            if unfeasible_sol:
-                continue
+                accesses_comb += all_accesses[mem_op][current_loop_idx]
             if size_comb > mem_capacity:
                 if i == 0:
                     raise MemoryTooSmallException(
@@ -358,11 +336,6 @@ class MemoryAllocator:
                     )
                 continue
             if accesses_comb <= best_accesses:
-                found_sol=True
                 best_accesses = accesses_comb
                 best_loop_idxs = current_loop_idxs
-        if not found_sol:
-            raise MemoryTooSmallException(
-                        "The memory can't store all loops assigned to lower level memories. Likely due to spatial unrolling."
-                    )
         return best_loop_idxs
