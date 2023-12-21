@@ -60,11 +60,10 @@ class MemoryAllocator:
             "O_final", self.precision["O"]
         )  # Final output precision
         # Initialize the unallocated loops with the ordering for each operand
-        self.ordering_loops_fixed=[(dim,size) for (dim, size) in self.ordering if dim in self.layer.layer_attrs['fixed_loops']]
         self.unallocated = {}
         for mem_op in self.mem_ops:
             self.unallocated[mem_op] = [
-                Loop(dim, size) for (dim, size) in self.ordering# if dim not in self.layer.layer_attrs['fixed_loops']
+                Loop(dim, size) for (dim, size) in self.ordering
             ]
 
         # Initialize the allocated loops with the spatial mapping at the operand level for each operand
@@ -76,10 +75,6 @@ class MemoryAllocator:
                     op=layer_op, level=0
                 )
             ]
-            #+ [
-            #    Loop(dim,size)
-            #    for (dim,size) in self.ordering if dim in self.layer.layer_attrs['fixed_loops']
-            #]
 
         # Initialize the level of memory hierarchy for each layer operand at 1 (first memory level).
         # This information is required to fetch the correct spatial loops after we have allocated temporal loops.
