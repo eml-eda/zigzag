@@ -70,6 +70,9 @@ def visit(h,original_multiset,unordered_loops):
 def permutations(multiset,unordered_loops):
     """Generator providing all multiset permutations of a multiset."""
     tmp_multi=[(name,size) for name,size in multiset if name not in unordered_loops]
+    # add size 1 loop if empty, init function accesses element at 0
+    if len(tmp_multi)==0:
+        tmp_multi.append(("K",1))
     h, i, j = init(tmp_multi)
     yield visit(h,multiset,unordered_loops)
     while j.next is not None or j.value < h.value:
