@@ -119,7 +119,6 @@ class MemoryAllocator:
         mem_ops = node.operands
         # Then select only the mem operands that are required for this layer (e.g. pooling has no weights so one mem op less)
         mem_ops = [mem_op for mem_op in mem_ops if mem_op in self.mem_ops]
-        
         db_support=node.memory_instance.double_buffering_support
         # Get the capacity of this memory node (in bits)
         mem_capacity = node.memory_instance.size
@@ -256,7 +255,6 @@ class MemoryAllocator:
             precision = self.precision[mem_op]
 
         tensor_size_bits = tensor_size * precision
-
         return tensor_size_bits
 
 
