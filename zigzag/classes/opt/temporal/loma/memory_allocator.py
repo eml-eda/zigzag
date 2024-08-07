@@ -324,6 +324,15 @@ class MemoryAllocator:
                 current_loop_idxs.append(current_loop_idx + loop_idx_offsets[mem_op])
                 size_comb += all_sizes[mem_op][current_loop_idx]
                 accesses_comb += all_accesses[mem_op][current_loop_idx]
+            # FIX OUTPUT STATIOANRITY IF POSSIBLE
+            # Compute num. of loops that will be allocated
+            mem_op_to_allocated_loops = {mem_op:len([lp for lp in self.allocated[mem_op] if lp.type!="spatial"])+current_loop_idxs[mem_op_idx] for mem_op_idx,mem_op in enumerate(mem_ops)}
+            # if this memory supports more operands and one of them is allocated less than O contineu and avoid this allcation scheme
+            # because its not output stationary for now
+            if len(mem_ops)>0 and "O" in mem_ops and \
+                any([mem_op_to_allocated_loops[mem_op]<mem_op_to_allocated_loops["O"] for mem_op in mem_ops if mem_op!="O"]):
+                continue
+            
             if size_comb > mem_capacity:
                 if i == 0:
                     raise MemoryTooSmallException(
