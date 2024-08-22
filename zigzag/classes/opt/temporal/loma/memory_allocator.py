@@ -311,10 +311,12 @@ class MemoryAllocator:
         all_max_nb_loops_list = list(all_max_nb_loops.values())
         best_loop_idxs = [0 for mem_op in mem_ops]
         best_accesses = np.inf
+        max_allocated_out = 0
         nb_combinations = prod(len(sizes) for sizes in all_sizes.values())
         for i in range(nb_combinations):
             size_comb = 0
             accesses_comb = 0
+            out_allocated = 0
             current_loop_idxs = []
             for mem_op_idx, mem_op in enumerate(mem_ops):
                 this_max_nb_loops = all_max_nb_loops_list[mem_op_idx]
@@ -324,6 +326,8 @@ class MemoryAllocator:
                 current_loop_idxs.append(current_loop_idx + loop_idx_offsets[mem_op])
                 size_comb += all_sizes[mem_op][current_loop_idx]
                 accesses_comb += all_accesses[mem_op][current_loop_idx]
+                if mem_op=="O":
+                    out_allocated = current_loop_idx
             # FIX OUTPUT STATIOANRITY IF POSSIBLE
             # Compute num. of loops that will be allocated
             mem_op_to_allocated_loops = {mem_op:len([lp for lp in self.allocated[mem_op] if lp.type!="spatial"])+current_loop_idxs[mem_op_idx] for mem_op_idx,mem_op in enumerate(mem_ops)}
@@ -339,7 +343,9 @@ class MemoryAllocator:
                         "The memory can't store all loops assigned to lower level memories. Likely due to spatial unrolling."
                     )
                 continue
-            if accesses_comb <= best_accesses:
+            
+            if out_allocated>max_allocated_out or (out_allocated==max_allocated_out and accesses_comb<=best_accesses):
                 best_accesses = accesses_comb
                 best_loop_idxs = current_loop_idxs
+                max_allocated_out = out_allocated
         return best_loop_idxs
